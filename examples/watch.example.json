@@ -1,0 +1,18 @@
+{
+  "executable": "opencli",
+  "session": "USER_MUST_BIND_REAL_CHROME_TAB",
+  "profile": null,
+  "poll_seconds": 30,
+  "max_runtime": 3600,
+  "failure_limit": 3,
+  "stall_limit": 10,
+  "command_timeout": 15,
+  "allow_continue": false,
+  "title_selector": "h1.course-title, .course-title h1, .course-name",
+  "courses": [
+    {
+      "title": "Example training course",
+      "url": "https://example.invalid/player/example-course"
+    }
+  ]
+}

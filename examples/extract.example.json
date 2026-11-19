@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "mode": "agent_workflow_single_document_repeated",
+  "session": "owned-session-name",
+  "opencli_executable": "opencli",
+  "course": "示例课程（公开测试标题）",
+  "output_dir": "./authorized-course-pdfs",
+  "targets": [
+    {"chapter_index": 0, "chapter_title": "第一章：示例文档"},
+    {"chapter_index": 2, "chapter_title": "第三章：示例文档"}
+  ],
+  "limits": {"max_bytes": 83886080, "chunk_bytes": 196608, "timeout_seconds": 900},
+  "workflow": [
+    "This JSON is an agent/operator checklist, NOT a CLI config file or unattended batch runner.",
+    "Open an already-authorized course document yourself in the owned authenticated session. Do not handle login/captcha with this utility.",
+    "Run: python3 scripts/extract_course.py --probe --session owned-session-name",
+    "Validate the returned course, full visible catalog, exact zero-based target indices and exact titles against targets. Reject exams, missing targets, ambiguous catalog or unknown authorization. Hidden/unloaded catalog entries are not enumerated.",
+    "Record earliest unfinished non-exam authorized chapter from progress values below 100. Missing progress or uncertain authorization requires human review; do not guess. The CLI never clicks chapters.",
+    "If permitted to change UI, the operator/agent opens each configured target using normal authorized UI, then probes again. Download only when exact course/index/title matches and there is one explicit Photo PDF viewer.",
+    "Run per target: python3 scripts/extract_course.py --download --session owned-session-name --expect-course '示例课程（公开测试标题）' --chapter-index 0 --chapter-title '第一章：示例文档' --output-dir ./authorized-course-pdfs",
+    "Repeat with the next exact configured index/title. Record each returned safe manifest. Do not treat skipped chapters, HTML responses, page mismatches or canvas-only sources as successful full extraction.",
+    "In the agent/operator finally step, restore the recorded earliest unfinished authorized chapter through normal UI if UI changes were enabled, then probe to verify exact course/index/title. Report restoration failure separately; do not claim completion.",
+    "Without UI-change permission, extract only the already-open matching target. This utility cannot batch unopened documents or restore a chapter on its own.",
+    "CORS, denied access, unsupported document source or download restrictions: stop and use the site's official Download control if available. Never disable browser security or replay cookies."
+  ],
+  "publication_warning": "Only share scripts, tests and this synthetic example. Never publish PDFs, manifests with real titles, browser profiles, signed URLs or credentials."
+}
