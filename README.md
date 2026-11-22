@@ -15,6 +15,12 @@
 
 当前适配 Traingo 网页及其 Vue 3 `Photo` 文档查看器。**其他平台、不同页面版本或全画布课件没有自动兼容保证。**
 
+## 在豆包 Work 中一句话部署
+
+> 请把 https://github.com/AkumaLeo/traingo-lms-skill 部署到我授权的本机目录：先取得并检查仓库，阅读 README.md、SKILL.md 和 docs/DOUBAO.md，再先运行 scripts/bootstrap.py 只读预检，明确允许后用 --install --check 建立本地独立环境并验收；不要覆盖已有目录、安装全局软件或扩展，不要绑定浏览器、登录、学习或考试，技能上传/启用需界面操作时交给我，并如实分级报告结果。
+
+详见 [豆包 Work 本地部署指南](docs/DOUBAO.md)：含 macOS/Windows 命令、隐私和人工上传边界。需要宿主实际具备本机文件/终端权限；**云端沙箱不等于本机部署，依赖或冒烟通过不等于豆包技能已启用**。不假设自动注册 API 或固定安装路径，不需要 MCP。原有 Hermes 安装及课程功能不变。
+
 ## 安装到 Hermes
 
 ```bash
