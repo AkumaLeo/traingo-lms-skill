@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from launcher_fixture import launcher
 from unittest import mock
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -154,7 +155,7 @@ class WatchTests(unittest.TestCase):
             self.assertEqual(m.tick(), 'stopped')
 
     def test_adapter_envelope_and_no_shell(self):
-        c = config(); c['profile'] = 'synthetic-profile'; c['executable'] = 'opencli'
+        c = config(); c['profile'] = 'synthetic-profile'; c['executable'] = sys.executable
         a = w.OpenCLI(c)
         response = mock.Mock(returncode=0, stdout=json.dumps({'ok': True, 'data': snap()}))
         with mock.patch.object(w.subprocess, 'run', return_value=response) as run:
@@ -203,9 +204,7 @@ class WatchTests(unittest.TestCase):
     def test_cli_safe_modes_with_explicit_synthetic_executable(self):
         with tempfile.TemporaryDirectory() as d:
             p = pathlib.Path(d)
-            executable = p/'synthetic-opencli'
-            executable.write_text('#!' + sys.executable + '\nimport json\nprint(' + repr(json.dumps({'ok': True, 'data': snap()})) + ')\n')
-            executable.chmod(0o700)
+            executable = launcher(p, {'ok': True, 'data': snap()})
             c = config(); c['executable'] = str(executable)
             cfg = p/'test-config.json'; cfg.write_text(json.dumps(c))
             for flag in [[], ['--once'], ['--read-only'], ['--dry-run']]:
@@ -292,10 +291,9 @@ process.stdout.write(JSON.stringify(output));
 
     def test_cli_bounded_run_with_synthetic_executable(self):
         with tempfile.TemporaryDirectory() as d:
-            p = pathlib.Path(d); executable = p/'synthetic-opencli'
+            p = pathlib.Path(d)
             s = snap(); s['chapters'][0]['percent'] = 20
-            executable.write_text('#!' + sys.executable + '\nprint(' + repr(json.dumps({'ok': True, 'data': s})) + ')\n')
-            executable.chmod(0o700)
+            executable = launcher(p, {'ok': True, 'data': s})
             c = config(); c.update(executable=str(executable), max_runtime=1)
             cfg = p/'synthetic-config.json'; cfg.write_text(json.dumps(c))
             result = subprocess.run([sys.executable, str(ROOT/'scripts/traingo_watch.py'),

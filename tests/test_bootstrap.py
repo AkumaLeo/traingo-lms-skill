@@ -4,6 +4,7 @@ import importlib.util
 import io
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -24,7 +25,7 @@ class BootstrapTests(unittest.TestCase):
         self.addCleanup(self.stack.close)
         self.stack.enter_context(contextlib.redirect_stdout(self.output))
         self.stack.enter_context(patch.object(b, 'ROOT', self.root))
-        self.stack.enter_context(patch.object(b.shutil, 'which', side_effect=lambda name: '/tools/' + name))
+        self.stack.enter_context(patch.object(b.shutil, 'which', side_effect=lambda name: '/tools/' + name + ('.exe' if sys.platform == 'win32' else '')))
         self.run = self.stack.enter_context(patch.object(b.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)))
         self.create = self.stack.enter_context(patch.object(b.venv.EnvBuilder, 'create', side_effect=self.fake_create))
 
@@ -39,7 +40,7 @@ class BootstrapTests(unittest.TestCase):
         path = self.root / '.venv'
         path.mkdir()
         self.fake_create(path)
-        (path / b.MARKER).write_text(b.MARKER_VALUE)
+        (path / b.MARKER).write_bytes(b.MARKER_VALUE.encode('utf-8'))
         return path
 
     def test_default_readonly_and_missing_environment(self):
@@ -126,8 +127,10 @@ class BootstrapTests(unittest.TestCase):
         other.mkdir()
         try:
             (self.root / '.venv').symlink_to(other, target_is_directory=True)
-        except OSError:
-            self.skipTest('symlinks unavailable')
+        except OSError as error:
+            if sys.platform == 'win32' and getattr(error, 'winerror', None) == 1314:
+                self.skipTest('Windows symlink privilege unavailable')
+            raise
         self.assertEqual(b.main(['--install']), 1)
         self.create.assert_not_called()
 
@@ -157,6 +160,23 @@ class BootstrapTests(unittest.TestCase):
         self.assertEqual(len(writes), 1)
         self.assertEqual(writes[0].get('newline'), '\n')
         self.assertEqual((self.root / '.venv' / b.MARKER).read_bytes(), b.MARKER_VALUE.encode('utf-8'))
+
+    def test_explicit_mirror_only_reaches_isolated_pip_and_is_not_printed(self):
+        mirror = 'https://mirror.invalid/private/simple'
+        self.assertEqual(b.main(['--install', '--index-url', mirror]), 0)
+        calls = [c.args[0] for c in self.run.call_args_list if 'pip' in c.args[0]]
+        self.assertEqual(calls[0][calls[0].index('--index-url') + 1], mirror)
+        self.assertIn('--isolated', calls[0])
+        self.assertNotIn(mirror, self.output.getvalue())
+        self.assertFalse(any(mirror in c.args[0] for c in self.run.call_args_list if 'pip' not in c.args[0]))
+
+    def test_help_success_with_missing_tool_is_partial_not_check_pass(self):
+        self.owned()
+        with patch.object(b.shutil, 'which', side_effect=lambda name: None if name == 'opencli' else '/tools/' + name + ('.exe' if sys.platform == 'win32' else '')):
+            self.assertEqual(b.main(['--check']), 1)
+        self.assertIn('help_ok:', self.output.getvalue())
+        self.assertNotIn('smoke_passed:', self.output.getvalue())
+        self.assertIn('partial_help_ok:', self.output.getvalue())
 
     def test_windows_interpreter_layout(self):
         self.assertEqual(b.venv_python(Path('local'), windows=True), Path('local/Scripts/python.exe'))

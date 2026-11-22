@@ -7,7 +7,7 @@
 ## 能做什么
 
 - 检查指定在线课程与章节，区分课程、考试和项目总进度。
-- 复用自己的 Chrome 登录态，每 30 秒检查进度/倒计时，完成后切换下一节。
+- 复用自己已连接 Bridge 的浏览器登录态，每 30 秒检查进度/倒计时，完成后切换下一节。
 - 在显式允许时处理已确认的普通继续学习提示；遇到登录/身份校验、并发冲突和未知弹窗停止。
 - 优先导出当前文档的原始 PDF，通过权威页数和 PDF 文件解析核验，不把几张虚拟缩略图当作完整课件。
 - 原子状态文件、重复运行锁、运行上限、停滞检测、逐课程完成记录。
@@ -17,7 +17,7 @@
 
 ## 在豆包 Work 中一句话部署
 
-> 请把 https://github.com/AkumaLeo/traingo-lms-skill 部署到我授权的本机目录：先取得并检查仓库，阅读 README.md、SKILL.md 和 docs/DOUBAO.md，再先运行 scripts/bootstrap.py 只读预检，明确允许后用 --install --check 建立本地独立环境并验收；不要覆盖已有目录、安装全局软件或扩展，不要绑定浏览器、登录、学习或考试，技能上传/启用需界面操作时交给我，并如实分级报告结果。
+> 请检查并按 https://github.com/AkumaLeo/traingo-lms-skill 的 README、SKILL 和 docs/DOUBAO.md 部署到我授权的本机新目录：先只读预检，获准后 --install --check；受限网络经我同意才用文档的 HTTPS 镜像参数；不覆盖、不全局安装、不绑定浏览器或学习，启用需界面操作时交给我，按完整退出码报告，不把沙箱或部分 help 成功当作本机部署通过。
 
 详见 [豆包 Work 本地部署指南](docs/DOUBAO.md)：含 macOS/Windows 命令、隐私和人工上传边界。需要宿主实际具备本机文件/终端权限；**云端沙箱不等于本机部署，依赖或冒烟通过不等于豆包技能已启用**。不假设自动注册 API 或固定安装路径，不需要 MCP。原有 Hermes 安装及课程功能不变。
 
@@ -41,7 +41,7 @@ hermes -s traingo-lms
 ## 依赖
 
 - Python 3.9+。
-- Chrome + OpenCLI 2.x + Browser Bridge 扩展；需要能够控制你自己的已登录标签。
+- OpenCLI 2.x + Browser Bridge 扩展及其支持的浏览器；Chrome/Chromium 是上游文档路径，Windows Edge 的候选接入与未验证边界见 [指南](docs/DOUBAO.md#windows-使用-microsoft-edge独立的浏览器验收)。必须能控制本人正确的已登录标签，不能只凭同为 Chromium 就宣称通过。
 - PyMuPDF，用于真正打开 PDF、校验页数。
 
 在仓库目录创建独立环境：
@@ -58,7 +58,7 @@ OpenCLI 的安装与扩展配置以[上游说明](https://github.com/jackwener/o
 
 ## 开始使用
 
-1. 在自己的 Chrome 中打开培训平台并登录，进入准确的课程页面。登录、验证码、MFA 或身份核验由本人完成。
+1. 在本人已验证 Bridge 连接的 Chrome/Chromium 浏览器（Edge 需先按指南独立验收）中打开培训平台并登录，进入准确的课程页面。登录、验证码、MFA 或身份核验由本人完成。
 2. 把目标标签设为当前标签，按本机 OpenCLI 帮助完成绑定：
 
 ```bash

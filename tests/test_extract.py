@@ -7,6 +7,7 @@ import json
 import shutil
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -27,9 +28,9 @@ class ExtractionTests(unittest.TestCase):
     def test_opencli_envelope_and_argv(self):
         result = subprocess.CompletedProcess([], 0, '{"ok":true,"data":{"pages":7}}', '')
         with patch.object(m.subprocess, 'run', return_value=result) as run:
-            self.assertEqual(m.Browser('opencli', 'owned', 'profile', 12).evaluate('1'), {'pages': 7})
-            self.assertEqual(run.call_args.args[0], ['opencli', 'browser', 'eval', '--session', 'owned', '--profile', 'profile', '1'])
-            self.assertNotIn('shell', run.call_args.kwargs)
+            self.assertEqual(m.Browser(sys.executable, 'owned', 'profile', 12).evaluate('1'), {'pages': 7})
+            self.assertEqual(run.call_args.args[0], [sys.executable, 'browser', 'eval', '--session', 'owned', '--profile', 'profile', '1'])
+            self.assertFalse(run.call_args.kwargs.get('shell', False))
 
     def test_browser_errors_redacted(self):
         for result in (subprocess.CompletedProcess([], 1, '', 'https://example.invalid/private?secret=x'),
@@ -298,7 +299,7 @@ assert.equal((await extract({action:'chunk',nonce,offset:0,length:4})).error,'ca
 ''')
 
     def test_help_is_browser_free(self):
-        p = subprocess.run(['python3', str(ROOT / 'scripts/extract_course.py'), '--help'], capture_output=True, text=True)
+        p = subprocess.run([sys.executable, str(ROOT / 'scripts/extract_course.py'), '--help'], capture_output=True, text=True)
         self.assertEqual(p.returncode, 0)
         self.assertIn('--download', p.stdout)
         self.assertIn('--probe', p.stdout)

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """DOM-only Traingo monitor. Inspect is default; --run opts into record-changing UI.
 
-Bind a real Chrome tab to the configured OpenCLI session yourself. This tool never
-logs in, opens duplicate learning tabs, calls credit APIs, plays hidden media, or
+Bind a real, verified Browser Bridge tab to the configured OpenCLI session.
+This tool never logs in, opens duplicate learning tabs, calls credit APIs, plays hidden media, or
 answers exams. No external notifications. Status/ledger contain only whitelisted
 course/chapter evidence. A stale lock requires human review before removal.
 """
@@ -16,6 +16,10 @@ import re
 from pathlib import Path
 import subprocess
 import sys
+
+# -I source execution omits the script directory; trust only this bundled sibling.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from safe_argv import build_argv
 import tempfile
 import time
 from urllib.parse import urlsplit
@@ -202,7 +206,7 @@ class OpenCLI:
             budget = min(budget, self.deadline - time.monotonic())
         if budget <= 0: raise BrowserError('runtime_limit')
         try:
-            result = subprocess.run(argv, capture_output=True, text=True, timeout=budget,
+            result = subprocess.run(build_argv(argv[0], argv[1:]), capture_output=True, text=True, encoding='utf-8', timeout=budget,
                                     check=False, shell=False)
             envelope = json.loads(result.stdout)
             if result.returncode or not isinstance(envelope, dict) or envelope.get('ok') is not True:

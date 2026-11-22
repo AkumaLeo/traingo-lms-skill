@@ -23,6 +23,10 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+
+# -I source execution omits the script directory; trust only this bundled sibling.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from safe_argv import build_argv
 import tempfile
 import time
 import uuid
@@ -98,7 +102,8 @@ class Browser:
             args.extend(['--profile', self.profile])
         args.append(expression)
         try:
-            result = subprocess.run(args, capture_output=True, text=True, timeout=self.timeout)
+            result = subprocess.run(build_argv(args[0], args[1:]), capture_output=True,
+                                    text=True, encoding='utf-8', timeout=self.timeout, shell=False)
             if result.returncode:
                 raise ExtractError('browser_command_failed')
             if len(result.stdout) > 2 * 1024 * 1024:

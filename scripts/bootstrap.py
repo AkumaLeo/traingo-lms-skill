@@ -11,6 +11,10 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+
+# -I source execution omits the script directory; trust only this bundled sibling.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from safe_argv import build_argv
 import venv
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,11 +46,11 @@ def command(argv, timeout=15):
         # pip/requests must not consult user pip configuration or .netrc.
         environment.update(PIP_CONFIG_FILE=os.devnull, NETRC=os.devnull)
         return subprocess.run(
-            argv, cwd=str(ROOT), stdin=subprocess.DEVNULL, env=environment,
+            build_argv(argv[0], argv[1:]), cwd=str(ROOT), stdin=subprocess.DEVNULL, env=environment,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             timeout=timeout, shell=False, check=False,
         ).returncode == 0
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError, ValueError):
         return False
 
 
@@ -67,7 +71,7 @@ def owned_environment(directory):
         return False
 
 
-def prepare_environment(install):
+def prepare_environment(install, index_url=None):
     directory = ROOT / '.venv'
     if directory.exists() or directory.is_symlink():
         if not owned_environment(directory):
@@ -99,7 +103,8 @@ def prepare_environment(install):
         # No global pip, no cache, no package/tool/extension global installation.
         if not command([python, '-I', '-m', 'pip', '--isolated', '--disable-pip-version-check',
                         'install', '--no-input', '--no-cache-dir', '--retries', '1', '--timeout', '15',
-                        '-r', str(ROOT / 'requirements.txt')],
+                        '-r', str(ROOT / 'requirements.txt')] +
+                       (['--index-url', index_url] if index_url is not None else []),
                        timeout=300):
             print('failed: local pip install; check network/Python package support, then retry --install; raw output withheld')
             return None
@@ -110,11 +115,37 @@ def prepare_environment(install):
     return python
 
 
+def valid_index_url(value):
+    # Validate before urlsplit, which silently strips some control characters.
+    from urllib.parse import urlsplit, unquote
+    if not isinstance(value, str) or any(c.isspace() or ord(c) < 32 or 127 <= ord(c) <= 159 for c in value):
+        return False
+    if any(c in value for c in ('?', '#', '@', '\\')):
+        return False
+    try:
+        decoded = unquote(value, errors='strict')
+        if any(c.isspace() or ord(c) < 32 or 127 <= ord(c) <= 159 for c in decoded):
+            return False
+        url = urlsplit(value)
+        return (url.scheme == 'https' and bool(url.hostname) and url.username is None
+                and url.password is None and not url.query and not url.fragment
+                and (url.port is None or 1 <= url.port <= 65535))
+    except ValueError:
+        return False
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--install', action='store_true', help='consent to local .venv creation and pip install; network possible')
     parser.add_argument('--check', action='store_true', help='also smoke-test both existing scripts with --help only')
+    parser.add_argument('--index-url', metavar='HTTPS_URL',
+                        help='explicit HTTPS pip index; requires --install; never printed')
     args = parser.parse_args(argv)
+    if args.index_url is not None:
+        if not args.install:
+            parser.error('--index-url requires --install')
+        if not valid_index_url(args.index_url):
+            parser.error('invalid index URL: require HTTPS host, no credentials, query, fragment, whitespace or controls')
     print('privacy: fixed status only; no paths, child output, credentials or browser data reported; no report file written')
     if sys.version_info < (3, 9):
         print('missing: Python 3.9+; install/select it manually before retrying')
@@ -123,8 +154,8 @@ def main(argv=None):
     tools_ok = True
     for name, hint in (
         ('node', 'install Node.js manually using its official instructions'),
-        ('npm', 'install/select npm with Node.js manually'),
-        ('opencli', 'install OpenCLI 2.x and Browser Bridge manually per upstream README'),
+        ('npm', 'install/select official npm with Node.js; Windows requires node.exe and verified node_modules/npm/bin/npm-cli.js'),
+        ('opencli', 'install OpenCLI 2.x per upstream README; Windows requires node.exe and verified @jackwener/opencli package bin'),
     ):
         executable = shutil.which(name)
         if executable is None or not command([executable, '--version']):
@@ -132,7 +163,7 @@ def main(argv=None):
             tools_ok = False
         else:
             print('ok: ' + name + ' --version; compatibility/browser connection not verified')
-    python = prepare_environment(args.install)
+    python = prepare_environment(args.install, args.index_url)
     if python is None:
         return 1
     smoke_ok = True
@@ -143,11 +174,13 @@ def main(argv=None):
             else:
                 print('help_failed: ' + script + '; inspect the local script/dependencies manually')
                 smoke_ok = False
-        if smoke_ok:
-            print('smoke_passed: CLI help only; no browser, login, learning or course verification')
+        if smoke_ok and tools_ok:
+            print('smoke_passed: tools and CLI help only; no browser, login, learning or course verification')
+        elif smoke_ok:
+            print('partial_help_ok: both CLI helps passed; tools missing/failed; overall check FAILED')
     else:
         print('not_checked: CLI smoke; run scripts/bootstrap.py --check')
-    print('manual_boundary: upload/enable SKILL.md folder in host UI; Chrome/extension/binding and real-course validation remain separate')
+    print('manual_boundary: upload/enable SKILL.md folder in host UI; browser/extension/binding and real-course validation remain separate')
     return 0 if tools_ok and smoke_ok else 1
 
 
